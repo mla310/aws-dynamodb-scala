@@ -9,17 +9,24 @@ class AnnotationMapper[T: TypeTag: ClassTag] {
   lazy val classSymbol: Symbol = typeOf[T].typeSymbol.asClass
 
   /** Annotated class member Symbol */
-  lazy val memberSymbol: Seq[Symbol] = typeOf[T].member(termNames.CONSTRUCTOR).typeSignature match {
+  lazy val annotatedMemberSymbol: Seq[Symbol] = typeOf[T].member(termNames.CONSTRUCTOR).typeSignature match {
     // only take annotated members
     case MethodType(params, _) => params.filter(_.annotations.size > 0)
   }
+
+  /** Annotated class member Symbol */
+  lazy val notAnnotatedMemberSymbol: Seq[Symbol] = typeOf[T].member(termNames.CONSTRUCTOR).typeSignature match {
+    // only take annotated members
+    case MethodType(params, _) => params.filter(_.annotations.size == 0)
+  }
+
 
   /**
    * Returns the Symbol specified the annotation type.
    * @tparam A annotation class
    * @return the Symbol representing the member
    */
-  def getAs[A: TypeTag]: Option[Symbol] = memberSymbol.find(annotation[A](_).isDefined)
+  def getAs[A: TypeTag]: Option[Symbol] = annotatedMemberSymbol.find(annotation[A](_).isDefined)
 
   /**
    * Returns the Annotation specified the Symbol of the annotation type.
