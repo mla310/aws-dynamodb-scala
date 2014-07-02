@@ -16,12 +16,28 @@ class AnnotationMapper[T: TypeTag: ClassTag] {
 
   /**
    * Returns the Symbol specified the annotation type.
-   * @param symbols
    * @tparam A annotation class
-   * @return
+   * @return the Symbol representing the member
    */
-  def getAs[A: TypeTag](symbols: Symbol*): Option[Symbol] = symbols.find {
-    _.annotations.find(_.tree.tpe <:< typeOf[A]).isDefined
+  def getAs[A: TypeTag]: Option[Symbol] = memberSymbol.find(annotation[A](_).isDefined)
+
+  /**
+   * Returns the Annotation specified the Symbol of the annotation type.
+   * @param m the member
+   * @tparam A annotation class
+   * @return the Annotation granted to member
+   */
+  def annotation[A: TypeTag](m: Symbol): Option[Annotation] = m.annotations.find(_.tree.tpe <:< typeOf[A])
+
+  /**
+   * Returns the Annotation attribute.
+   * Note that the attribute type allows only string, the other throws Exception.
+   * @param a the annotation
+   * @return the annotation attribute list
+   */
+  def annotationAttribute(a: Annotation): Seq[String] = a.tree.children.tail.map {
+    case Literal(Constant(name: String)) => name
+    case _ => throw new Exception("invalid argument to static annotation: allow only string")
   }
 
   /**

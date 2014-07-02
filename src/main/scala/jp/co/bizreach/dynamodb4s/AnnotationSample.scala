@@ -11,24 +11,28 @@ object AnnotationSample {
     val instance = SampleEntity(10, "hoge", 1)
     val mapper = new AnnotationMapper[SampleEntity]
 
-    val id = mapper.getAs[id](mapper.memberSymbol: _*)
+    val id = mapper.getAs[id]
     println("***: " + id.map(_.name))
 
     val value = mapper.getValue(instance, id.get)
     println("***: " + value)
+
+    val annotation = mapper.annotation[db](mapper.classSymbol).get
+    val attr = mapper.annotationAttribute(annotation)
+    println("---: " + attr)
   }
 
 }
 
-final case class db() extends StaticAnnotation
+final case class db(name: String) extends StaticAnnotation
 final case class id() extends StaticAnnotation
-final case class version() extends StaticAnnotation
+final case class version(arg1: String, arg2: String) extends StaticAnnotation
 
-@db
+@db("SampleEntity")
 case class SampleEntity(
   @id
   userId: Long,
   userName: String,
-  @version
+  @version("arg1", "version number")
   versionNo: Long
 )
