@@ -12,36 +12,36 @@ object CreateTableTest extends App {
   implicit val dynamoDB = dynamodbv2.DynamoDB.local()
 
   val tableMeta: TableMeta = dynamoDB.createTable(
-    name    = "Members",
-    hashPK  = "Id"      -> AttributeType.Number,
-    rangePK = "Country" -> AttributeType.String,
-    otherAttributes = Seq("Company" -> AttributeType.String),
+    name    = "members",
+    hashPK  = "id"      -> AttributeType.Number,
+    rangePK = "country" -> AttributeType.String,
+    otherAttributes = Seq("company" -> AttributeType.String),
     indexes = Seq(LocalSecondaryIndex(
-      name       = "CompanyIndex",
-      keySchema  = Seq(KeySchema("Id", KeyType.Hash), KeySchema("Company", KeyType.Range)),
-      projection = Projection(ProjectionType.Include, Seq("Company"))
+      name       = "companyIndex",
+      keySchema  = Seq(KeySchema("id", KeyType.Hash), KeySchema("company", KeyType.Range)),
+      projection = Projection(ProjectionType.Include, Seq("company"))
     ))
   )
 
-  val table: Table = dynamoDB.table("Members").get
+  val table: Table = dynamoDB.table("members").get
 
   try {
-    table.put(1, "Japan", "Name" -> "Alice", "Age" -> 23, "Company" -> "Google")
-    table.put(2, "U.S.",  "Name" -> "Bob",   "Age" -> 36, "Company" -> "Google")
-    table.put(3, "Japan", "Name" -> "Chris", "Age" -> 29, "Company" -> "Amazon")
+    table.put(1, "Japan", "name" -> "Alice", "age" -> 23, "company" -> "Google")
+    table.put(2, "U.S.",  "name" -> "Bob",   "age" -> 36, "company" -> "Google")
+    table.put(3, "Japan", "name" -> "Chris", "age" -> 29, "company" -> "Amazon")
 
-    table.deleteItem(1, "Japan")
-    //dynamoDB.deleteItem(table, 1, "Japan")
-    table.putAttributes(1, "Japan", Seq("Name" -> "xxxx"))
-
-    //table.deleteItem(1, "Japan")
-
-    val googlers: Seq[Item] = table.scan(Seq("Country" -> Condition.eq("Japan")))
-    googlers.foreach { x =>
-      println(x.attributes)
-    }
+//    table.deleteItem(1, "Japan")
+//    //dynamoDB.deleteItem(table, 1, "Japan")
+//    table.putAttributes(1, "Japan", Seq("name" -> "xxxx"))
+//
+//    //table.deleteItem(1, "Japan")
+//
+//    val googlers: Seq[Item] = table.scan(Seq("Country" -> Condition.eq("Japan")))
+//    googlers.foreach { x =>
+//      println(x.attributes)
+//    }
   } finally {
-    table.destroy()
+//    table.destroy()
   }
 }
 

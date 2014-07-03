@@ -22,38 +22,23 @@ trait DynamoTable {
     db.deleteItem(db.table(table).get, hashPk, rangePk)
   }
 
-  def put[ENTITY](entity: ENTITY)(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[ENTITY], c: ClassTag[ENTITY]): Unit = {
-    val mapper = new AnnotationMapper[ENTITY]
+  def put[E](entity: E)(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Unit = {
+    val mapper = new AnnotationMapper[E]
+
     val hashPkSymbol  = mapper.getAs[hashPk]
     val rangePkSymbol = mapper.getAs[rangePk]
-    val attrSymbols   = mapper.notAnnotatedMemberSymbol
+    val attrSymbols   = mapper.notAnnotatedMemberSymbols
+    val attributes    = attrSymbols.map { s => s.name.toString -> mapper.getValue(entity, s) }
 
-    val attributes = attrSymbols.map { s =>
-      val name = s match {
-        case Literal(Constant(name: String)) => name
-      }
-      name -> mapper.getValue(entity, s)
+    if(hashPkSymbol.isDefined && rangePkSymbol.isDefined){
+      db.put(db.table(table).get, mapper.getValue(entity, hashPkSymbol.get), mapper.getValue(entity, rangePkSymbol.get), attributes: _*)
+    } else if(hashPkSymbol.isDefined){
+      db.put(db.table(table).get, mapper.getValue(entity, hashPkSymbol.get), attributes: _*)
+    } else {
+      // TODO Error!!
+      println("ERROR!!")
     }
-
-
-//    if(hashPkSymbol.isDefined && rangePkSymbol.isDefined){
-//      db.put(db.table(table).get,
-//        mapper.getValue(entity, hashPkSymbol.get),
-//        mapper.getValue(entity, rangePkSymbol.get),
-//        attributes: _*)
-//    } else if(hashPkSymbol.isDefined){
-//      db.put(db.table(table).get,
-//        mapper.getValue(entity, hashPkSymbol.get),
-//        attributes: _*)
-//    } else {
-//      // TODO Error!!
-//      println("ERROR!!")
-//    }
   }
-
-//  def putWithCondition(entity: ENTITY)(cond: T => Seq[(DynamoAttribute, ExpectedAttributeValue)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
-//
-//  }
 
   def putAttributes(hashPk: Any)(f: T => Seq[(DynamoAttribute, Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.table(table).get.putAttributes(hashPk, f(this).map { case (key, value) => (key.name, value) })
@@ -66,7 +51,8 @@ trait DynamoTable {
   def query[E](keyConditions: Seq[(String, com.amazonaws.services.dynamodbv2.model.Condition)],
                limit: Int = 1000,
                consistentRead: Boolean = false
-              )(implicit db: awscala.dynamodbv2.DynamoDB): Seq[E] = {
+              )(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Seq[E] = {
+    val mapper = new AnnotationMapper[E]
 
     val req = new QueryRequest()
       .withTableName(table)
@@ -74,18 +60,36 @@ trait DynamoTable {
       .withLimit(limit)
       .withConsistentRead(consistentRead)
       .withSelect(Select.SPECIFIC_ATTRIBUTES)
-      .withAttributesToGet("", "")
+      .withAttributesToGet(mapper.memberSymbols.map(_.name.toString): _*)
 
-    // TODO なんとかする
-    val items = db.query(req).getItems
+    val items  = db.query(req).getItems
+    val clazz  = c.runtimeClass
+    val fields = clazz.getDeclaredFields
 
-    null
+    items.asScala.map { x =>
+      val c = clazz.getConstructors()(0)
+      val args = c.getParameterTypes.map { x =>
+        if(x == classOf[Int]) new Integer(0) else null
+      }
+      val o = c.newInstance(args: _*)
+      fields.foreach { f =>
+        f.setAccessible(true)
+        val t = f.getType
+        // TODO Support Array and Binary
+        if(t == classOf[Int]){
+          f.set(o, x.get(f.getName).getN.toInt)
+        } else {
+          f.set(o, x.get(f.getName).getS)
+        }
+      }
+      o.asInstanceOf[E]
+    }
   }
 
 }
 
-case class HashKey(name: String)
-case class RangeKey(name: String)
+//case class HashKey(name: String)
+//case class RangeKey(name: String)
 case class DynamoAttribute(name: String)
 
 object Members extends DynamoTable {
@@ -95,22 +99,37 @@ object Members extends DynamoTable {
   val company = DynamoAttribute("Company")
 }
 
-case class Member(id: Int, country: String, name: String, age: Int, company: String)
+case class Member(
+  @hashPk @name("Id") id: Int,
+  @rangePk @name("Country") country: String,
+  @name("Name") name: String,
+  @name("Age") age: Int,
+  @name("Company") company: String
+)
 
-object test {
+object DynamoDBTest extends App {
 
-  /**
-   * Implicit conversion from awscala.dynamodbv2.Condition to ExpectedAttributeValue for conditional updating
-   */
-  implicit def condition2expected(cond: com.amazonaws.services.dynamodbv2.model.Condition): ExpectedAttributeValue = {
-    new ExpectedAttributeValue().withComparisonOperator(cond.getComparisonOperator).withAttributeValueList(cond.getAttributeValueList)
-  }
+//  /**
+//   * Implicit conversion from awscala.dynamodbv2.Condition to ExpectedAttributeValue for conditional updating
+//   */
+//  implicit def condition2expected(cond: com.amazonaws.services.dynamodbv2.model.Condition): ExpectedAttributeValue = {
+//    new ExpectedAttributeValue().withComparisonOperator(cond.getComparisonOperator).withAttributeValueList(cond.getAttributeValueList)
+//  }
 
   implicit val db = DynamoDB.local()
 
+//  Members.put(Member(1, "Japan", "Takezoe", 32, "BizR"))
+
   Members.putAttributes(1, "Japan"){ t =>
-    Seq(t.company -> "BizReach")
+    Seq(t.name -> "xxx")
   }
+
+  val list = Members.query[Member](keyConditions = Seq("id" -> Condition.eq(1)))
+  println(list)
+
+//  Members.putAttributes(1, "Japan"){ t =>
+//    Seq(t.company -> "BizReach")
+//  }
 
 //  Members.putWithCondition(Member(1, "Japan", "Chris", 32, "Google")){ t =>
 //    Seq(t.company -> Condition.eq(0))
