@@ -26,13 +26,13 @@ object AnnotationSample {
 
 final case class db(name: String) extends StaticAnnotation
 final case class id() extends StaticAnnotation
-final case class version(arg1: String, arg2: String) extends StaticAnnotation
+//final case class version(arg1: String, arg2: String) extends StaticAnnotation
 
 @db("SampleEntity")
 case class SampleEntity(
   @id
   userId: Long,
   userName: String,
-  @version("arg1", "version number")
+  //@version("arg1", "version number")
   versionNo: Long
 )
