@@ -14,14 +14,23 @@ trait DynamoTable {
   protected val table: String
   type T = this.type
 
+  /**
+   * Delete item by the hash key.
+   */
   def delete(hashPk: Any)(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.deleteItem(db.table(table).get, hashPk)
   }
 
+  /**
+   * Delete item by the hash key and the range key.
+   */
   def delete(hashPk: Any, rangePk: Any)(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.deleteItem(db.table(table).get, hashPk, rangePk)
   }
 
+  /**
+   * Create or update the given item
+   */
   def put[E](entity: E)(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Unit = {
     val mapper = new AnnotationMapper[E]
 
@@ -40,14 +49,23 @@ trait DynamoTable {
     }
   }
 
+  /**
+   * Update specified attributes by the hash key.
+   */
   def putAttributes(hashPk: Any)(f: T => Seq[(DynamoAttribute, Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.table(table).get.putAttributes(hashPk, f(this).map { case (key, value) => (key.name, value) })
   }
 
+  /**
+   * Update specified attributes by the hash key and the range key.
+   */
   def putAttributes(hashPk: Any, rangePk: Any)(f: T => Seq[(DynamoAttribute, Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.table(table).get.putAttributes(hashPk, rangePk, f(this).map { case (key, value) => (key.name, value) })
   }
 
+  /**
+   *
+   */
   def query[E](keyConditions: Seq[(String, com.amazonaws.services.dynamodbv2.model.Condition)],
                limit: Int = 1000,
                consistentRead: Boolean = false
