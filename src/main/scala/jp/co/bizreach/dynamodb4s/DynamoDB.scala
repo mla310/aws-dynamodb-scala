@@ -75,14 +75,32 @@ trait DynamoTable {
       fields.foreach { f =>
         f.setAccessible(true)
         val t = f.getType
-        // TODO Support Array and Binary
-        if(t == classOf[Int]){
-          f.set(o, x.get(f.getName).getN.toInt)
+        val attr = x.get(f.getName)
+        if(t == classOf[Option[_]]){
+          f.set(o, Option(getAttributeValue(attr)))
         } else {
-          f.set(o, x.get(f.getName).getS)
+          f.set(o, getAttributeValue(attr))
         }
       }
       o.asInstanceOf[E]
+    }
+  }
+
+  private def getAttributeValue(attr: AttributeValue): Any = {
+    if(attr.getB != null){
+      attr.getB
+    } else if(attr.getBS != null){
+      attr.getBS
+    } else if(attr.getN != null){
+      attr.getN.toInt
+    } else if(attr.getNS != null){
+      attr.getNS.asScala.map(_.toInt)
+    } else if(attr.getS != null){
+      attr.getS
+    } else if(attr.getSS != null){
+      attr.getSS.asScala
+    } else {
+      null
     }
   }
 
@@ -93,28 +111,21 @@ trait DynamoTable {
 case class DynamoAttribute(name: String)
 
 object Members extends DynamoTable {
-  protected val table = "Members"
-  val name    = DynamoAttribute("Name")
-  val age     = DynamoAttribute("Age")
-  val company = DynamoAttribute("Company")
+  protected val table = "members"
+  val name    = DynamoAttribute("name")
+  val age     = DynamoAttribute("age")
+  val company = DynamoAttribute("company")
 }
 
-case class Member(
-  @hashPk id: Int,
-  @rangePk country: String,
-  name: String,
-  age: Int,
-  company: String
+class Member(
+  @hashPk val id: Int,
+  @rangePk val country: String,
+  val name: String,
+  val age: Int,
+  val company: Option[String]
 )
 
 object DynamoDBTest extends App {
-
-//  /**
-//   * Implicit conversion from awscala.dynamodbv2.Condition to ExpectedAttributeValue for conditional updating
-//   */
-//  implicit def condition2expected(cond: com.amazonaws.services.dynamodbv2.model.Condition): ExpectedAttributeValue = {
-//    new ExpectedAttributeValue().withComparisonOperator(cond.getComparisonOperator).withAttributeValueList(cond.getAttributeValueList)
-//  }
 
   implicit val db = DynamoDB.local()
 
@@ -125,7 +136,13 @@ object DynamoDBTest extends App {
   }
 
   val list = Members.query[Member](keyConditions = Seq("id" -> Condition.eq(1)))
-  println(list)
+  list.foreach { x =>
+    println(x.id)
+    println(x.country)
+    println(x.name)
+    println(x.age)
+    println(x.company)
+  }
 
 //  Members.putAttributes(1, "Japan"){ t =>
 //    Seq(t.company -> "BizReach")
