@@ -100,11 +100,11 @@ object Members extends DynamoTable {
 }
 
 case class Member(
-  @hashPk @name("Id") id: Int,
-  @rangePk @name("Country") country: String,
-  @name("Name") name: String,
-  @name("Age") age: Int,
-  @name("Company") company: String
+  @hashPk id: Int,
+  @rangePk country: String,
+  name: String,
+  age: Int,
+  company: String
 )
 
 object DynamoDBTest extends App {
