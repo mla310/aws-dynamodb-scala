@@ -1,4 +1,4 @@
 dynamodb4s
 ==========
 
-Scala client of AWS DynamoDB
+Scala client for AWS DynamoDB
