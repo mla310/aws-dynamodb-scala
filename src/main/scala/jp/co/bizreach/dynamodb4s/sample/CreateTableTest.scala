@@ -1,6 +1,4 @@
-package jp.co.bizreach.dynamodb4s
-
-import scala.annotation.StaticAnnotation
+package jp.co.bizreach.dynamodb4s.sample
 
 /**
  * This is a test code of AWSScala DynamoDB interface.
