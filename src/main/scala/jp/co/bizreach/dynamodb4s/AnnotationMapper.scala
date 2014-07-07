@@ -9,7 +9,7 @@ class AnnotationMapper[T: TypeTag: ClassTag] {
   lazy val classSymbol: Symbol = typeOf[T].typeSymbol.asClass
 
   /** Annotated class member Symbol */
-  lazy val memberSymbols: Seq[Symbol] = typeOf[T].member(termNames.CONSTRUCTOR).typeSignature match {
+  lazy val memberSymbols: Seq[Symbol] = typeOf[T].member(nme.CONSTRUCTOR).typeSignature match {
     case MethodType(params, _) => params
   }
 
@@ -32,7 +32,7 @@ class AnnotationMapper[T: TypeTag: ClassTag] {
    * @tparam A annotation class
    * @return the Annotation granted to member
    */
-  def annotation[A: TypeTag](m: Symbol): Option[Annotation] = m.annotations.find(_.tree.tpe <:< typeOf[A])
+  def annotation[A: TypeTag](m: Symbol): Option[Annotation] = m.annotations.find(_.tpe <:< typeOf[A])
 
   /**
    * Returns the Annotation attribute.
@@ -40,7 +40,7 @@ class AnnotationMapper[T: TypeTag: ClassTag] {
    * @param a the annotation
    * @return the annotation attribute list
    */
-  def annotationAttribute(a: Annotation): Seq[String] = a.tree.children.tail.map {
+  def annotationAttribute(a: Annotation): Seq[String] = a.scalaArgs.map {
     case Literal(Constant(name: String)) => name
     case _ => throw new Exception("invalid argument to static annotation: allow only string")
   }
