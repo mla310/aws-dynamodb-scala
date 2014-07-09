@@ -1,8 +1,9 @@
 package jp.co.bizreach.dynamodb4s
 
 import com.amazonaws.services.dynamodbv2.model.{QueryRequest, Select, AttributeValue, ExpectedAttributeValue}
-import awscala.Condition
-import awscala.dynamodbv2.{DynamoDB, Condition}
+//import awscala.Condition
+//import awscala.dynamodbv2.{DynamoDB, Condition}
+import com.amazonaws.services.dynamodbv2.model.Condition
 import scala.collection.JavaConverters._
 
 import reflect.ClassTag
@@ -54,21 +55,59 @@ trait DynamoTable {
   /**
    * Update specified attributes by the hash key.
    */
-  def putAttributes(hashPk: Any)(f: T => Seq[(DynamoAttribute, Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
+  def putAttributes(hashPk: Any)(f: T => Seq[(DynamoAttribute[_], Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.table(table).get.putAttributes(hashPk, f(this).map { case (key, value) => (key.name, value) })
   }
 
   /**
    * Update specified attributes by the hash key and the range key.
    */
-  def putAttributes(hashPk: Any, rangePk: Any)(f: T => Seq[(DynamoAttribute, Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
+  def putAttributes(hashPk: Any, rangePk: Any)(f: T => Seq[(DynamoAttribute[_], Any)])(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {
     db.table(table).get.putAttributes(hashPk, rangePk, f(this).map { case (key, value) => (key.name, value) })
   }
 
-  /**
-   *
-   */
-  def query[E](keyConditions: Seq[(String, com.amazonaws.services.dynamodbv2.model.Condition)],
+  def query(): MapBuilder[T] = MapBuilder(this, t => Nil, t => Nil)
+
+  case class MapBuilder[T](
+    private val _table: T,
+    private val _keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
+    private val _attributes: T => Seq[DynamoAttribute[_]],
+    private val _limit: Int = 1000,
+    private val _consistentRead: Boolean = false){
+
+    def keyConditions(f: T => Seq[(DynamoKey, Condition)]): MapBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ f(t)))
+
+    def keyCondition(f: T => (DynamoKey, Condition)): MapBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ Seq(f(t))))
+
+    def attributes(f: T => Seq[DynamoAttribute[_]]): MapBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
+
+    def attribute(f: T => DynamoAttribute[_]): MapBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
+
+    def limit(i: Int): MapBuilder[T] = this.copy(_limit = i)
+
+    def consistentRead(b: Boolean): MapBuilder[T] = this.copy(_consistentRead = b)
+
+    def map[E](mapper: (T, DynamoRow) => E)(implicit db: awscala.dynamodbv2.DynamoDB): Seq[E] = {
+      val req = new QueryRequest()
+        .withTableName(table)
+        .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
+        .withLimit(_limit)
+        .withConsistentRead(_consistentRead)
+        .withSelect(Select.SPECIFIC_ATTRIBUTES)
+        .withAttributesToGet(_attributes(_table).map(_.name): _*)
+
+      val items  = db.query(req).getItems
+      items.asScala.map { item =>
+        mapper(_table, new DynamoRow(item))
+      }
+    }
+  }
+
+  class DynamoRow(attrs: java.util.Map[String, AttributeValue]){
+    def get[T](attr: DynamoAttribute[T]) = getAttributeValue(attrs.get(attr.name)).asInstanceOf[T]
+  }
+
+  def query[E](keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
                limit: Int = 1000,
                consistentRead: Boolean = false
               )(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Seq[E] = {
@@ -76,7 +115,7 @@ trait DynamoTable {
 
     val req = new QueryRequest()
       .withTableName(table)
-      .withKeyConditions(keyConditions.toMap.asJava)
+      .withKeyConditions(keyConditions(this).map { case (key, condition) => key.name -> condition }.toMap.asJava)
       .withLimit(limit)
       .withConsistentRead(consistentRead)
       .withSelect(Select.SPECIFIC_ATTRIBUTES)
@@ -125,11 +164,3 @@ trait DynamoTable {
   }
 
 }
-
-//case class HashKey(name: String)
-//case class RangeKey(name: String)
-
-/**
- * Use to define attribute in Dynamo table definition.
- */
-case class DynamoAttribute(name: String)

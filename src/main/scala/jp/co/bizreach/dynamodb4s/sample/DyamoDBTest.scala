@@ -5,14 +5,17 @@ import awscala.dynamodbv2.{Condition, DynamoDB}
 
 object Members extends DynamoTable {
   protected val table = "members"
-  val name    = DynamoAttribute("name")
-  val age     = DynamoAttribute("age")
-  val company = DynamoAttribute("company")
+  val id      = DynamoHashKey[Int]("id")
+  val country = DynamoRangeKey[String]("country")
+  val name    = DynamoAttribute[String]("name")
+  val age     = DynamoAttribute[String]("age")
+  val company = DynamoAttribute[String]("company")
+
 }
 
 class Member(
-  @hashPk val id: Int,
-  @rangePk val country: String,
+  val id: Int,
+  val country: String,
   val name: String,
   val age: Int,
   val company: Option[String]
@@ -25,10 +28,13 @@ object DynamoDBTest extends App {
   //  Members.put(Member(1, "Japan", "Takezoe", 32, "BizR"))
 
   Members.putAttributes(1, "Japan"){ t =>
-    Seq(t.name -> "xxx")
+    t.name -> "xxx" :: Nil
   }
 
-  val list = Members.query[Member](keyConditions = Seq("id" -> Condition.eq(1)))
+  val list = Members.query[Member](keyConditions = { t =>
+    t.id -> Condition.eq(1) :: Nil
+  })
+
   list.foreach { x =>
     println(x.id)
     println(x.country)
@@ -37,13 +43,21 @@ object DynamoDBTest extends App {
     println(x.company)
   }
 
-  //  Members.putAttributes(1, "Japan"){ t =>
-  //    Seq(t.company -> "BizReach")
-  //  }
+  val names = Members.query()
+    .attribute(_.name)
+    .attribute(_.company)
+    .keyCondition(_.id -> Condition.eq(1))
+    .limit(100000)
+    .map { (t, x) =>
+      (x.get(t.name), x.get(t.company))
+    }
 
-  //  Members.putWithCondition(Member(1, "Japan", "Chris", 32, "Google")){ t =>
-  //    Seq(t.company -> Condition.eq(0))
-  //  }
 
+//    keyConditions = Members.id -> Condition.eq(1) :: Nil,
+//    attributes    = Members.name :: Members.company :: Nil
+//  ){ row =>
+//    (row.get(Members.name), row.get(Members.company))
+//  }
 
+  println(names)
 }
