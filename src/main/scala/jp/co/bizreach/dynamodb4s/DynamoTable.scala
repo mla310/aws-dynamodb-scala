@@ -1,14 +1,13 @@
 package jp.co.bizreach.dynamodb4s
 
-import com.amazonaws.services.dynamodbv2.model.{QueryRequest, Select, AttributeValue, ExpectedAttributeValue}
-//import awscala.Condition
-//import awscala.dynamodbv2.{DynamoDB, Condition}
+import com.amazonaws.services.dynamodbv2.model.{QueryRequest, Select, AttributeValue}
 import com.amazonaws.services.dynamodbv2.model.Condition
 import scala.collection.JavaConverters._
 
 import reflect.ClassTag
 import reflect.runtime._
 import universe._
+import DynamoTable._
 
 /**
  * Trait for Dynamo table definition.
@@ -137,20 +136,24 @@ trait DynamoTable {
       }
     }
   }
+}
+
+object DynamoTable {
 
   class DynamoRow(attrs: java.util.Map[String, AttributeValue]){
-    def get[T](attr: DynamoAttribute[T]) = getAttributeValue(attrs.get(attr.name)).asInstanceOf[T]
+    def get[T](attr: DynamoAttribute[T]) = attr.convert(getAttributeValue(attrs.get(attr.name)))
   }
 
   private def getAttributeValue(attr: AttributeValue): Any = {
-    if(attr.getB != null){
-      attr.getB
-    } else if(attr.getBS != null){
-      attr.getBS
-    } else if(attr.getN != null){
-      attr.getN.toInt
+    //    if(attr.getB != null){
+    //      attr.getB
+    //    } else if(attr.getBS != null){
+    //      attr.getBS
+    //    } else
+    if(attr.getN != null){
+      attr.getN
     } else if(attr.getNS != null){
-      attr.getNS.asScala.map(_.toInt)
+      attr.getNS.asScala
     } else if(attr.getS != null){
       attr.getS
     } else if(attr.getSS != null){
@@ -159,5 +162,4 @@ trait DynamoTable {
       null
     }
   }
-
 }
