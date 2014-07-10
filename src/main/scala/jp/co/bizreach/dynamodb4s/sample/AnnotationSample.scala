@@ -1,6 +1,7 @@
-package jp.co.bizreach.dynamodb4s
+package jp.co.bizreach.dynamodb4s.sample
 
 import annotation.StaticAnnotation
+import jp.co.bizreach.dynamodb4s.AnnotationMapper
 
 /**
  * Sample code for annotation information.
