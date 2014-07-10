@@ -31,9 +31,11 @@ object DynamoDBTest extends App {
     t.name -> "xxx" :: Nil
   }
 
-  val list = Members.query[Member](keyConditions = { t =>
-    t.id -> Condition.eq(1) :: Nil
-  })
+  val list = Members.query().
+    keyConditions { t =>
+      t.id -> Condition.eq(1) :: Nil
+    }
+    .as[Member]
 
   list.foreach { x =>
     println(x.id)

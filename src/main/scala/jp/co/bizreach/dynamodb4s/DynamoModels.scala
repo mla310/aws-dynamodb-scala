@@ -66,26 +66,26 @@ trait DynamoTable {
     db.table(table).get.putAttributes(hashPk, rangePk, f(this).map { case (key, value) => (key.name, value) })
   }
 
-  def query(): MapBuilder[T] = MapBuilder(this, t => Nil, t => Nil)
+  def query(): DynamoQueryBuilder[T] = DynamoQueryBuilder(this, t => Nil, t => Nil)
 
-  case class MapBuilder[T](
+  case class DynamoQueryBuilder[T](
     private val _table: T,
     private val _keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
     private val _attributes: T => Seq[DynamoAttribute[_]],
     private val _limit: Int = 1000,
     private val _consistentRead: Boolean = false){
 
-    def keyConditions(f: T => Seq[(DynamoKey, Condition)]): MapBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ f(t)))
+    def keyConditions(f: T => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ f(t)))
 
-    def keyCondition(f: T => (DynamoKey, Condition)): MapBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ Seq(f(t))))
+    def keyCondition(f: T => (DynamoKey, Condition)): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ Seq(f(t))))
 
-    def attributes(f: T => Seq[DynamoAttribute[_]]): MapBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
+    def attributes(f: T => Seq[DynamoAttribute[_]]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
 
-    def attribute(f: T => DynamoAttribute[_]): MapBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
+    def attribute(f: T => DynamoAttribute[_]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
 
-    def limit(i: Int): MapBuilder[T] = this.copy(_limit = i)
+    def limit(i: Int): DynamoQueryBuilder[T] = this.copy(_limit = i)
 
-    def consistentRead(b: Boolean): MapBuilder[T] = this.copy(_consistentRead = b)
+    def consistentRead(b: Boolean): DynamoQueryBuilder[T] = this.copy(_consistentRead = b)
 
     def map[E](mapper: (T, DynamoRow) => E)(implicit db: awscala.dynamodbv2.DynamoDB): Seq[E] = {
       val req = new QueryRequest()
@@ -101,48 +101,45 @@ trait DynamoTable {
         mapper(_table, new DynamoRow(item))
       }
     }
+
+    def as[E](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E], t: TypeTag[E]): Seq[E] = {
+      val mapper = new AnnotationMapper[E]
+
+      val req = new QueryRequest()
+        .withTableName(table)
+        .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
+        .withLimit(_limit)
+        .withConsistentRead(_consistentRead)
+        .withSelect(Select.SPECIFIC_ATTRIBUTES)
+        .withAttributesToGet(mapper.memberSymbols.map(_.name.toString): _*)
+
+      val items  = db.query(req).getItems
+      val clazz  = c.runtimeClass
+      val fields = clazz.getDeclaredFields
+
+      items.asScala.map { x =>
+        val c = clazz.getConstructors()(0)
+        val args = c.getParameterTypes.map { x =>
+          if(x == classOf[Int]) new Integer(0) else null
+        }
+        val o = c.newInstance(args: _*)
+        fields.foreach { f =>
+          f.setAccessible(true)
+          val t = f.getType
+          val attr = x.get(f.getName)
+          if(t == classOf[Option[_]]){
+            f.set(o, Option(getAttributeValue(attr)))
+          } else {
+            f.set(o, getAttributeValue(attr))
+          }
+        }
+        o.asInstanceOf[E]
+      }
+    }
   }
 
   class DynamoRow(attrs: java.util.Map[String, AttributeValue]){
     def get[T](attr: DynamoAttribute[T]) = getAttributeValue(attrs.get(attr.name)).asInstanceOf[T]
-  }
-
-  def query[E](keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
-               limit: Int = 1000,
-               consistentRead: Boolean = false
-              )(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Seq[E] = {
-    val mapper = new AnnotationMapper[E]
-
-    val req = new QueryRequest()
-      .withTableName(table)
-      .withKeyConditions(keyConditions(this).map { case (key, condition) => key.name -> condition }.toMap.asJava)
-      .withLimit(limit)
-      .withConsistentRead(consistentRead)
-      .withSelect(Select.SPECIFIC_ATTRIBUTES)
-      .withAttributesToGet(mapper.memberSymbols.map(_.name.toString): _*)
-
-    val items  = db.query(req).getItems
-    val clazz  = c.runtimeClass
-    val fields = clazz.getDeclaredFields
-
-    items.asScala.map { x =>
-      val c = clazz.getConstructors()(0)
-      val args = c.getParameterTypes.map { x =>
-        if(x == classOf[Int]) new Integer(0) else null
-      }
-      val o = c.newInstance(args: _*)
-      fields.foreach { f =>
-        f.setAccessible(true)
-        val t = f.getType
-        val attr = x.get(f.getName)
-        if(t == classOf[Option[_]]){
-          f.set(o, Option(getAttributeValue(attr)))
-        } else {
-          f.set(o, getAttributeValue(attr))
-        }
-      }
-      o.asInstanceOf[E]
-    }
   }
 
   private def getAttributeValue(attr: AttributeValue): Any = {
