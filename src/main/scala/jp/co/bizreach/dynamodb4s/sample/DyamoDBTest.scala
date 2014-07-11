@@ -31,35 +31,30 @@ object DynamoDBTest extends App {
     t.name -> "xxx" :: Nil
   }
 
-  val list = Members.query().
-    keyConditions { t =>
-      t.id -> Condition.eq(1) :: Nil
-    }
-    .as[Member]
-
-  list.foreach { x =>
-    println(x.id)
-    println(x.country)
-    println(x.name)
-    println(x.age)
-    println(x.company)
-  }
+//  val list = Members.query().
+//    keyConditions { t =>
+//      t.id -> Condition.eq(1) :: Nil
+//    }
+//    .as[Member]
+//
+//  list.foreach { x =>
+//    println(x.id)
+//    println(x.country)
+//    println(x.name)
+//    println(x.age)
+//    println(x.company)
+//  }
 
   val names = Members.query()
+    .attribute(_.id)
+    .attribute(_.country)
     .attribute(_.name)
     .attribute(_.company)
     .keyCondition(_.id -> Condition.eq(1))
     .limit(100000)
     .map { (t, x) =>
-      (x.get(t.name), x.get(t.company))
+      (x.get(t.id), x.get(t.country), x.get(t.name), x.get(t.company))
     }
-
-
-//    keyConditions = Members.id -> Condition.eq(1) :: Nil,
-//    attributes    = Members.name :: Members.company :: Nil
-//  ){ row =>
-//    (row.get(Members.name), row.get(Members.company))
-//  }
 
   println(names)
 }

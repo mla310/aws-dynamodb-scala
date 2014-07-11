@@ -27,6 +27,7 @@ package object dynamodb4s {
 
   trait DynamoKey { val name: String }
   trait DynamoProperty[T] {
+    val name: String
     def convert(value: Any): T
   }
   case class DynamoHashKey[T](name: String)(implicit t: DynamoDataType[T]) extends DynamoKey with DynamoProperty[T] {

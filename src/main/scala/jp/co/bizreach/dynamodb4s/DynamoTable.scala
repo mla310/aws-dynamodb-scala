@@ -70,7 +70,7 @@ trait DynamoTable {
   case class DynamoQueryBuilder[T](
     private val _table: T,
     private val _keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
-    private val _attributes: T => Seq[DynamoAttribute[_]],
+    private val _attributes: T => Seq[DynamoProperty[_]],
     private val _limit: Int = 1000,
     private val _consistentRead: Boolean = false){
 
@@ -78,9 +78,9 @@ trait DynamoTable {
 
     def keyCondition(f: T => (DynamoKey, Condition)): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ Seq(f(t))))
 
-    def attributes(f: T => Seq[DynamoAttribute[_]]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
+    def attributes(f: T => Seq[DynamoProperty[_]]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
 
-    def attribute(f: T => DynamoAttribute[_]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
+    def attribute(f: T => DynamoProperty[_]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
 
     def limit(i: Int): DynamoQueryBuilder[T] = this.copy(_limit = i)
 
@@ -141,10 +141,11 @@ trait DynamoTable {
 object DynamoTable {
 
   class DynamoRow(attrs: java.util.Map[String, AttributeValue]){
-    def get[T](attr: DynamoAttribute[T]) = attr.convert(getAttributeValue(attrs.get(attr.name)))
+    def get[T](property: DynamoProperty[T]) = property.convert(getAttributeValue(attrs.get(property.name)))
   }
 
   private def getAttributeValue(attr: AttributeValue): Any = {
+    // TODO Support binary type
     //    if(attr.getB != null){
     //      attr.getB
     //    } else if(attr.getBS != null){
