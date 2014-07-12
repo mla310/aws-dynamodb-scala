@@ -48,7 +48,7 @@ case class Member(
 
 ```scala
 // Put by case class
-Members.put(Member(1, "Japan", "Naoki Takezoe", 30, "BizReach"))
+Members.put(Member(1, "Japan", "Naoki Takezoe", 30, Some("BizReach")))
 
 // Update only specified properties
 Members.putAttributes(1, "Japan"){ t =>
