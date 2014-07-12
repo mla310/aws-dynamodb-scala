@@ -115,6 +115,15 @@ trait DynamoTable {
       val items  = db.query(req).getItems
       val clazz  = c.runtimeClass
       val fields = clazz.getDeclaredFields
+      val props  = _table.getClass.getDeclaredFields
+
+      val converters = props
+        .filter { f => classOf[DynamoProperty[_]].isAssignableFrom(f.getType) }
+        .map { f  =>
+          f.setAccessible(true)
+          val p = f.get(_table).asInstanceOf[DynamoProperty[_]]
+          p.name -> p.convert _
+        }.toMap
 
       items.asScala.map { x =>
         val c = clazz.getConstructors()(0)
@@ -125,11 +134,12 @@ trait DynamoTable {
         fields.foreach { f =>
           f.setAccessible(true)
           val t = f.getType
-          val attr = x.get(f.getName)
+          val attribute = x.get(f.getName)
+          val converter = converters(f.getName)
           if(t == classOf[Option[_]]){
-            f.set(o, Option(getAttributeValue(attr)))
+            f.set(o, Option(converter(getAttributeValue(attribute))))
           } else {
-            f.set(o, getAttributeValue(attr))
+            f.set(o, converter(getAttributeValue(attribute)))
           }
         }
         o.asInstanceOf[E]

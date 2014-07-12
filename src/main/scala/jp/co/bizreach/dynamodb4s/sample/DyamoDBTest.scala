@@ -8,7 +8,7 @@ object Members extends DynamoTable {
   val id      = DynamoHashKey[Int]("id")
   val country = DynamoRangeKey[String]("country")
   val name    = DynamoAttribute[String]("name")
-  val age     = DynamoAttribute[String]("age")
+  val age     = DynamoAttribute[Int]("age")
   val company = DynamoAttribute[String]("company")
 
 }
@@ -31,19 +31,19 @@ object DynamoDBTest extends App {
     t.name -> "xxx" :: Nil
   }
 
-//  val list = Members.query().
-//    keyConditions { t =>
-//      t.id -> Condition.eq(1) :: Nil
-//    }
-//    .as[Member]
-//
-//  list.foreach { x =>
-//    println(x.id)
-//    println(x.country)
-//    println(x.name)
-//    println(x.age)
-//    println(x.company)
-//  }
+  val list = Members.query().
+    keyConditions { t =>
+      t.id -> Condition.eq(1) :: Nil
+    }
+    .as[Member]
+
+  list.foreach { x =>
+    println(x.id)
+    println(x.country)
+    println(x.name)
+    println(x.age)
+    println(x.company)
+  }
 
   val names = Members.query()
     .attribute(_.id)
