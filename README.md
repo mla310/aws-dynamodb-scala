@@ -61,7 +61,7 @@ Members.putAttributes(1, "Japan"){ t =>
 ```scala
 // Query with case class mapping
 val list: Seq[Member] = Members.query.keyConditions { t =>
-  t.id -> Condition.eq(1) :: t.country -> Condition.eq("Japan) :: Nil
+  t.id -> Condition.eq(1) :: t.country -> Condition.eq("Japan”) :: Nil
 }.as[Member]
 
 // Query with manual mapping
