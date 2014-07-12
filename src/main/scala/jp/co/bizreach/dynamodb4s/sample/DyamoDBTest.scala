@@ -31,7 +31,7 @@ object DynamoDBTest extends App {
     t.name -> "xxx" :: Nil
   }
 
-  val list = Members.query().
+  val list = Members.query.
     keyConditions { t =>
       t.id -> Condition.eq(1) :: Nil
     }
@@ -45,7 +45,7 @@ object DynamoDBTest extends App {
     println(x.company)
   }
 
-  val names = Members.query()
+  val names = Members.query
     .attribute(_.id)
     .attribute(_.country)
     .attribute(_.name)
