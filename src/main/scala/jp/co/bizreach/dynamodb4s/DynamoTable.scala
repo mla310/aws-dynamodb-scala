@@ -101,16 +101,14 @@ trait DynamoTable {
       }
     }
 
-    def as[E](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E], t: TypeTag[E]): Seq[E] = {
-      val mapper = new AnnotationMapper[E]
-
+    def as[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E], t: TypeTag[E]): Seq[E] = {
       val req = new QueryRequest()
         .withTableName(table)
         .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
         .withLimit(_limit)
         .withConsistentRead(_consistentRead)
         .withSelect(Select.SPECIFIC_ATTRIBUTES)
-        .withAttributesToGet(mapper.memberSymbols.map(_.name.toString): _*)
+        .withAttributesToGet(c.runtimeClass.getDeclaredFields.map(_.getName): _*)
 
       val items  = db.query(req).getItems
       val tableInfo = getTableInfo(_table)
