@@ -34,18 +34,18 @@ trait DynamoTable {
   /**
    * Create or update the given item
    */
-  def put[E](entity: E)(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Unit = {
-    val mapper = new AnnotationMapper[E]
+  def put[E <: AnyRef](entity: E)(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Unit = {
+    val tableInfo = getTableInfo(this)
 
-    val hashPkSymbol  = mapper.getAs[hashPk]
-    val rangePkSymbol = mapper.getAs[rangePk]
-    val attrSymbols   = mapper.notAnnotatedMemberSymbols
-    val attributes    = attrSymbols.map { s => s.name.toString -> mapper.getValue(entity, s) }
-
-    if(hashPkSymbol.isDefined && rangePkSymbol.isDefined){
-      db.put(db.table(table).get, mapper.getValue(entity, hashPkSymbol.get), mapper.getValue(entity, rangePkSymbol.get), attributes: _*)
-    } else if(hashPkSymbol.isDefined){
-      db.put(db.table(table).get, mapper.getValue(entity, hashPkSymbol.get), attributes: _*)
+    if(tableInfo.hashKey.isDefined && tableInfo.rangeKey.isDefined){
+      db.put(db.table(table).get,
+        getValueFromEntity(entity, tableInfo.hashKey.get),
+        getValueFromEntity(entity, tableInfo.rangeKey.get),
+        tableInfo.attributes.map(p => p.name -> getValueFromEntity(entity, p)): _*)
+    } else if(tableInfo.hashKey.isDefined){
+      db.put(db.table(table).get,
+        getValueFromEntity(entity, tableInfo.hashKey.get),
+        tableInfo.attributes.map(p => p.name -> getValueFromEntity(entity, p)): _*)
     } else {
       throw new DynamoDBException(s"Primary key is not defined for ${entity.getClass.getName}")
     }
@@ -67,7 +67,7 @@ trait DynamoTable {
 
   def query(): DynamoQueryBuilder[T] = DynamoQueryBuilder(this, t => Nil, t => Nil)
 
-  case class DynamoQueryBuilder[T](
+  case class DynamoQueryBuilder[T <: DynamoTable](
     private val _table: T,
     private val _keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
     private val _attributes: T => Seq[DynamoProperty[_]],
@@ -113,17 +113,9 @@ trait DynamoTable {
         .withAttributesToGet(mapper.memberSymbols.map(_.name.toString): _*)
 
       val items  = db.query(req).getItems
+      val tableInfo = getTableInfo(_table)
       val clazz  = c.runtimeClass
       val fields = clazz.getDeclaredFields
-      val props  = _table.getClass.getDeclaredFields
-
-      val converters = props
-        .filter { f => classOf[DynamoProperty[_]].isAssignableFrom(f.getType) }
-        .map { f  =>
-          f.setAccessible(true)
-          val p = f.get(_table).asInstanceOf[DynamoProperty[_]]
-          p.name -> p.convert _
-        }.toMap
 
       items.asScala.map { x =>
         val c = clazz.getConstructors()(0)
@@ -135,11 +127,11 @@ trait DynamoTable {
           f.setAccessible(true)
           val t = f.getType
           val attribute = x.get(f.getName)
-          val converter = converters(f.getName)
+          val property = tableInfo.getDynamoProperty(f.getName)
           if(t == classOf[Option[_]]){
-            f.set(o, Option(converter(getAttributeValue(attribute))))
+            f.set(o, Option(property.convert(getAttributeValue(attribute))))
           } else {
-            f.set(o, converter(getAttributeValue(attribute)))
+            f.set(o, property.convert(getAttributeValue(attribute)))
           }
         }
         o.asInstanceOf[E]
@@ -152,6 +144,42 @@ object DynamoTable {
 
   class DynamoRow(attrs: java.util.Map[String, AttributeValue]){
     def get[T](property: DynamoProperty[T]) = property.convert(getAttributeValue(attrs.get(property.name)))
+  }
+
+  case class TableInfo(hashKey: Option[DynamoHashKey[_]],
+                       rangeKey: Option[DynamoRangeKey[_]],
+                       attributes: Seq[DynamoAttribute[_]]){
+
+    def getDynamoProperty(name: String): DynamoProperty[_] =
+      (Seq[Option[DynamoProperty[_]]](hashKey, rangeKey).flatten ++ attributes).find(_.name == name).get
+  }
+
+  private def getTableInfo(table: DynamoTable): TableInfo = {
+    var hashKey: Option[DynamoHashKey[_]] = None
+    var rangeKey: Option[DynamoRangeKey[_]] = None
+    var attributes: scala.collection.mutable.ListBuffer[DynamoAttribute[_]]
+      = new scala.collection.mutable.ListBuffer[DynamoAttribute[_]]
+
+    table.getClass.getDeclaredFields.foreach { f =>
+      f.setAccessible(true)
+      if(f.getType.isAssignableFrom(classOf[DynamoHashKey[_]])){
+        hashKey = Some(f.get(table).asInstanceOf[DynamoHashKey[_]])
+      }
+      else if(f.getType.isAssignableFrom(classOf[DynamoRangeKey[_]])){
+        rangeKey = Some(f.get(table).asInstanceOf[DynamoRangeKey[_]])
+      }
+      else if(f.getType.isAssignableFrom(classOf[DynamoAttribute[_]])){
+        attributes += f.get(table).asInstanceOf[DynamoAttribute[_]]
+      }
+    }
+
+    TableInfo(hashKey, rangeKey, attributes.toSeq)
+  }
+
+  private def getValueFromEntity(entity: AnyRef, property: DynamoProperty[_]): Any = {
+    val f = entity.getClass.getDeclaredField(property.name)
+    f.setAccessible(true)
+    property.convert(f.get(entity))
   }
 
   private def getAttributeValue(attr: AttributeValue): Any = {
