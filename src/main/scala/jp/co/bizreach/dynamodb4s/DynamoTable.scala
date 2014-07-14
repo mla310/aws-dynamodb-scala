@@ -144,15 +144,14 @@ object DynamoTable {
     def get[T](property: DynamoProperty[T]) = property.convert(getAttributeValue(attrs.get(property.name)))
   }
 
-  case class TableInfo(hashKey: Option[DynamoHashKey[_]],
-                       rangeKey: Option[DynamoRangeKey[_]],
-                       attributes: Seq[DynamoAttribute[_]]){
+  private[dynamodb4s] case class TableInfo(
+    hashKey: Option[DynamoHashKey[_]], rangeKey: Option[DynamoRangeKey[_]], attributes: Seq[DynamoAttribute[_]]){
 
     def getDynamoProperty(name: String): DynamoProperty[_] =
       (Seq[Option[DynamoProperty[_]]](hashKey, rangeKey).flatten ++ attributes).find(_.name == name).get
   }
 
-  private def getTableInfo(table: DynamoTable): TableInfo = {
+  private[dynamodb4s] def getTableInfo(table: DynamoTable): TableInfo = {
     var hashKey: Option[DynamoHashKey[_]] = None
     var rangeKey: Option[DynamoRangeKey[_]] = None
     var attributes: scala.collection.mutable.ListBuffer[DynamoAttribute[_]]
@@ -174,13 +173,13 @@ object DynamoTable {
     TableInfo(hashKey, rangeKey, attributes.toSeq)
   }
 
-  private def getValueFromEntity(entity: AnyRef, property: DynamoProperty[_]): Any = {
+  private[dynamodb4s] def getValueFromEntity(entity: AnyRef, property: DynamoProperty[_]): Any = {
     val f = entity.getClass.getDeclaredField(property.name)
     f.setAccessible(true)
     property.convert(f.get(entity))
   }
 
-  private def getAttributeValue(attr: AttributeValue): Any = {
+  private[dynamodb4s] def getAttributeValue(attr: AttributeValue): Any = {
     // TODO Support binary type
     //    if(attr.getB != null){
     //      attr.getB
