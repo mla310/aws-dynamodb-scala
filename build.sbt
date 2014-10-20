@@ -1,16 +1,14 @@
-name := "dynamodb4s"
+name := "aws-dynamodb-scala"
 
 organization := "jp.co.bizreach"
 
-version := "0.0.2"
+version := "0.0.3"
 
-scalaVersion := "2.11.1"
-
-crossScalaVersions := Seq("2.10.3", "2.11.1")
+scalaVersion := "2.11.2"
 
 libraryDependencies ++= Seq(
   "org.scala-lang"               %  "scala-reflect"         % scalaVersion.value,
-  "com.github.seratch"           %% "awscala"               % "0.2.5"
+  "com.github.seratch"           %% "awscala"               % "0.4.0"
 )
 
 publishMavenStyle := true
