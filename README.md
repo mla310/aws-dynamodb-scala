@@ -1,16 +1,16 @@
-dynamodb4s
+aws-dynamodb-scala
 ==========
 
-Scala client for AWS DynamoDB
+Scala client for Amazon DynamoDB
 
 ## How to use
-Add a following dependency into your build.sbt at first.
+Add a following dependency into your `build.sbt` at first.
 
 ```scala
 libraryDependencies += "jp.co.bizreach" %% "aws-dynamodb-scala" % "0.0.2"
 ```
 
-Then you can use DynamoDB4s in your code.
+Then you can use aws-dynamodb-scala in your code.
 
 ```
 import jp.co.bizreach.dynamodb4s._
