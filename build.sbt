@@ -26,7 +26,7 @@ publishArtifact in Test := false
 pomIncludeRepository := { _ => false }
 
 pomExtra := (
-  <url>https://github.com/bizreach/dynamodb4s</url>
+  <url>https://github.com/bizreach/aws-dynamodb-scala</url>
     <licenses>
       <license>
         <name>The Apache Software License, Version 2.0</name>
@@ -34,8 +34,8 @@ pomExtra := (
       </license>
     </licenses>
     <scm>
-      <url>https://github.com/bizreach/dynamodb4s</url>
-      <connection>scm:git:https://github.com/bizreach/dynamodb4s.git</connection>
+      <url>https://github.com/bizreach/aws-dynamodb-scala</url>
+      <connection>scm:git:https://github.com/bizreach/aws-dynamodb-scala.git</connection>
     </scm>
     <developers>
       <developer>
