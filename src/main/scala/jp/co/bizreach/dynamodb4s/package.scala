@@ -7,22 +7,42 @@ package object dynamodb4s {
   }
 
   implicit val IntDynamoType = new DynamoDataType[Int]{
-    def convert(value: Any): Int = value.asInstanceOf[String].toInt
+    def convert(value: Any): Int = value match {
+      case Some(x: Int)  => x
+      case Some(x: Long) => x.toInt
+      case Some(x: Any)  => x.toString.toInt
+      case None          => 0
+      case x: Int        => x
+      case x: Long       => x.toInt
+      case x             => x.toString.toInt
+    }
   }
   implicit val LongDynamoType = new DynamoDataType[Long]{
-    def convert(value: Any): Long = value.asInstanceOf[String].toLong
+    def convert(value: Any): Long = value match {
+      case Some(x: Int)  => x.toLong
+      case Some(x: Long) => x
+      case Some(x)       => x.toString.toLong
+      case None          => 0
+      case x: Int        => x.toLong
+      case x: Long       => x
+      case x             => x.toString.toLong
+    }
   }
   implicit val StringDynamoType = new DynamoDataType[String]{
-    def convert(value: Any): String = value.asInstanceOf[String]
+    def convert(value: Any): String = value match {
+      case Some(x) => x.toString
+      case None    => ""
+      case x       => x.toString
+    }
   }
   implicit val IntListDynamoType = new DynamoDataType[List[Int]]{
-    def convert(value: Any): List[Int] = value.asInstanceOf[List[String]].map(_.toInt)
+    def convert(value: Any): List[Int] = value.asInstanceOf[List[Any]].map(IntDynamoType.convert)
   }
   implicit val LongListDynamoType = new DynamoDataType[List[Long]]{
-    def convert(value: Any): List[Long] = value.asInstanceOf[List[String]].map(_.toLong)
+    def convert(value: Any): List[Long] = value.asInstanceOf[List[Any]].map(LongDynamoType.convert)
   }
   implicit val StringListDynamoType = new DynamoDataType[List[String]]{
-    def convert(value: Any): List[String] = value.asInstanceOf[List[String]]
+    def convert(value: Any): List[String] = value.asInstanceOf[List[Any]].map(StringDynamoType.convert)
   }
 
   trait DynamoKey { val name: String }
