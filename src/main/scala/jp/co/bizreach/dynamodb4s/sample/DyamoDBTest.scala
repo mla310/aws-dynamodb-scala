@@ -1,7 +1,7 @@
 package jp.co.bizreach.dynamodb4s.sample
 
 import jp.co.bizreach.dynamodb4s._
-import awscala.dynamodbv2.{Condition, DynamoDB}
+import awscala.dynamodbv2.{DynamoDBCondition, DynamoDB}
 
 object Members extends DynamoTable {
   protected val table = "members"
@@ -33,7 +33,7 @@ object DynamoDBTest extends App {
 
   val list = Members.query.
     keyConditions { t =>
-      t.id -> Condition.eq(1) :: Nil
+      t.id -> DynamoDBCondition.eq(1) :: Nil
     }
     .as[Member]
 
@@ -50,7 +50,7 @@ object DynamoDBTest extends App {
     .attribute(_.country)
     .attribute(_.name)
     .attribute(_.company)
-    .keyCondition(_.id -> Condition.eq(1))
+    .keyCondition(_.id -> DynamoDBCondition.eq(1))
     .limit(100000)
     .map { (t, x) =>
       (x.get(t.id), x.get(t.country), x.get(t.name), x.get(t.company))
