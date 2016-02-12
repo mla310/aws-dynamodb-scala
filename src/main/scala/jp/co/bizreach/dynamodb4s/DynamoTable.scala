@@ -5,8 +5,6 @@ import com.amazonaws.services.dynamodbv2.model.Condition
 import scala.collection.JavaConverters._
 
 import reflect.ClassTag
-import reflect.runtime._
-import universe._
 import DynamoTable._
 
 /**
@@ -34,7 +32,7 @@ trait DynamoTable {
   /**
    * Create or update the given item
    */
-  def put[E <: AnyRef](entity: E)(implicit db: awscala.dynamodbv2.DynamoDB, t: TypeTag[E], c: ClassTag[E]): Unit = {
+  def put[E <: AnyRef](entity: E)(implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): Unit = {
     val tableInfo = getTableInfo(this)
 
     if(tableInfo.hashKey.isDefined && tableInfo.rangeKey.isDefined){
@@ -101,7 +99,7 @@ trait DynamoTable {
       }
     }
 
-    def as[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E], t: TypeTag[E]): Seq[E] = {
+    def as[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): Seq[E] = {
       val req = new QueryRequest()
         .withTableName(table)
         .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
