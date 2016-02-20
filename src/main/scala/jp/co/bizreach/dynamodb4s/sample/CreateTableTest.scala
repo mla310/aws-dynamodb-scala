@@ -1,7 +1,7 @@
 package jp.co.bizreach.dynamodb4s.sample
 
 /**
- * This is a test code of AWSScala DynamoDB interface.
+ * This is a test code of AWScala DynamoDB interface.
  */
 object CreateTableTest extends App {
   import awscala._
