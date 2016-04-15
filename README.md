@@ -14,6 +14,7 @@ Then you can use aws-dynamodb-scala in your code.
 
 ```
 import jp.co.bizreach.dynamodb4s._
+import awscala.dynamodbv2.DynamoDB
 
 // for local environment
 implicit val db = DynamoDB.local()
