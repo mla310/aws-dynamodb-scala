@@ -12,7 +12,7 @@ libraryDependencies += "jp.co.bizreach" %% "aws-dynamodb-scala" % "0.0.2"
 
 Then you can use aws-dynamodb-scala in your code.
 
-```
+```scala
 import jp.co.bizreach.dynamodb4s._
 import awscala.dynamodbv2.DynamoDB
 
