@@ -31,7 +31,7 @@ package object dynamodb4s {
   implicit val StringDynamoType = new DynamoDataType[String]{
     def convert(value: Any): String = value match {
       case Some(x) => x.toString
-      case None    => ""
+      case None    => null
       case x       => x.toString
     }
   }

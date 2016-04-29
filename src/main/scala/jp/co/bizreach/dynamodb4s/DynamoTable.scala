@@ -39,7 +39,7 @@ trait DynamoTable {
       db.put(db.table(table).get,
         getValueFromEntity(entity, tableInfo.hashKey.get),
         getValueFromEntity(entity, tableInfo.rangeKey.get),
-        tableInfo.attributes.map(p => p.name -> getValueFromEntity(entity, p)): _*)
+        tableInfo.attributes.map(p => p.name -> getValueFromEntity(entity, p)).filter(_ != null): _*)
     } else if(tableInfo.hashKey.isDefined){
       db.put(db.table(table).get,
         getValueFromEntity(entity, tableInfo.hashKey.get),
@@ -125,7 +125,7 @@ trait DynamoTable {
           val attribute = x.get(f.getName)
           val property = tableInfo.getDynamoProperty(f.getName)
           if(t == classOf[Option[_]]){
-            f.set(o, Option(property.convert(getAttributeValue(attribute))))
+            f.set(o, Option(getAttributeValue(attribute)).map(property.convert))
           } else {
             f.set(o, property.convert(getAttributeValue(attribute)))
           }
@@ -184,7 +184,9 @@ object DynamoTable {
     //    } else if(attr.getBS != null){
     //      attr.getBS
     //    } else
-    if(attr.getN != null){
+    if(attr == null) {
+      null
+    } else if(attr.getN != null){
       attr.getN
     } else if(attr.getNS != null){
       attr.getNS.asScala
