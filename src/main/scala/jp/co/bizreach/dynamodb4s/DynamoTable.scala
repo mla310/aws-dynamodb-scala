@@ -99,6 +99,12 @@ trait DynamoTable {
       }
     }
 
+    def list[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): Seq[E] = as
+
+    def firstOption[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): Option[E] = as.headOption
+
+    def first[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): E = as.head
+
     def as[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): Seq[E] = {
       val req = new QueryRequest()
         .withTableName(table)
