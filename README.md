@@ -28,8 +28,8 @@ Create table definition as below:
 ```scala
 object Members extends DynamoTable {
   protected val table = "members"
-  val id      = DynamoHashKey[Int]("id")
-  val country = DynamoRangeKey[String]("country")
+  val country = DynamoHashKey[String]("country")
+  val id      = DynamoRangeKey[Int]("id")
   val name    = DynamoAttribute[String]("name")
   val age     = DynamoAttribute[Int]("age")
   val company = DynamoAttribute[String]("company")
@@ -37,8 +37,8 @@ object Members extends DynamoTable {
 
 // Case class is optional
 case class Member(
-  val id: Int,
   val country: String,
+  val id: Int,
   val name: String,
   val age: Int,
   val company: Option[String]
@@ -49,10 +49,10 @@ case class Member(
 
 ```scala
 // Put by case class
-Members.put(Member(1, "Japan", "Naoki Takezoe", 30, Some("BizReach")))
+Members.put(Member("Japan", 1, "Naoki Takezoe", 30, Some("BizReach")))
 
 // Update only specified properties
-Members.putAttributes(1, "Japan"){ t =>
+Members.putAttributes("Japan", 1){ t =>
   t.name -> "Takako Shimamoto" :: t.age  -> 25 :: Nil
 }
 ```
@@ -62,17 +62,39 @@ Members.putAttributes(1, "Japan"){ t =>
 ```scala
 // Query with case class mapping
 val list: Seq[Member] = Members.query.keyConditions { t =>
-  t.id -> Condition.eq(1) :: t.country -> Condition.eq("Japan") :: Nil
-}.as[Member]
+  t.country -> DynamoDBCondition.eq("Japan") :: t.id -> DynamoDBCondition.eq(1) :: Nil
+}.list[Member]
 
 // Query with manual mapping
 val list: Seq[(String, Int)] = Members.query
   .attribute(_.name)
   .attribute(_.age)
-  .keyCondition(_.id -> Condition.eq(1))
-  .keyCondition(_.country -> Condition.eq("Japan"))
+  .keyCondition(_.country -> DynamoDBCondition.eq("Japan"))
+  .keyCondition(_.id -> DynamoDBCondition.eq(1))
   .limit(100000)
   .map { (t, x) =>
     (x.get(t.name), x.get(t.age))
   }
+```
+
+### Secondary index
+
+```scala
+object Members extends DynamoTable {
+  protected val table = "members"
+  val id      = DynamoHashKey[Int]("id")
+  val country = DynamoRangeKey[String]("country")
+  val name    = DynamoAttribute[String]("name")
+  val age     = DynamoAttribute[Int]("age")
+  val company = DynamoAttribute[String]("company")
+  object companyIndex extends DynamoTable.SecondaryIndex {
+    val index   = "companyIndex"
+    val country = DynamoHashKey[String]("country")
+    val company = DynamoRangeKey[String]("company")
+  }  
+}
+
+Members.query.secondaryIndexCondition(_.companyIndex){ t =>
+  t.country -> DynamoDBCondition.eq("Japan") :: t.company -> DynamoDBCondition.eq("BizReach") :: Nil
+}.list[Member]
 ```

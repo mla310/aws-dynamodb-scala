@@ -12,7 +12,7 @@ import DynamoTable._
  */
 trait DynamoTable {
 
-  protected val table: String
+  val table: String
   type T = this.type
 
   /**
@@ -70,7 +70,13 @@ trait DynamoTable {
     private val _keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
     private val _attributes: T => Seq[DynamoProperty[_]],
     private val _limit: Int = 1000,
-    private val _consistentRead: Boolean = false){
+    private val _consistentRead: Boolean = false,
+    private val _indexName: Option[String] = None){
+
+    def secondaryIndexCondition[I <: SecondaryIndex](i: T  => I)(f: I => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = {
+      val index = i(_table)
+      this.copy(_indexName = Some(index.index), _keyConditions = t => (_keyConditions(t) ++ f(index)))
+    }
 
     def keyConditions(f: T => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ f(t)))
 
@@ -113,6 +119,8 @@ trait DynamoTable {
         .withConsistentRead(_consistentRead)
         .withSelect(Select.SPECIFIC_ATTRIBUTES)
         .withAttributesToGet(c.runtimeClass.getDeclaredFields.map(_.getName): _*)
+
+      _indexName.foreach(req.withIndexName)
 
       val items  = db.query(req).getItems
       val tableInfo = getTableInfo(_table)
@@ -203,5 +211,9 @@ object DynamoTable {
     } else {
       null
     }
+  }
+
+  trait SecondaryIndex {
+    val index: String
   }
 }
