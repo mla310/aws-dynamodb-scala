@@ -4,6 +4,7 @@ aws-dynamodb-scala
 Scala client for Amazon DynamoDB
 
 ## How to use
+
 Add a following dependency into your `build.sbt` at first.
 
 ```scala
@@ -94,7 +95,7 @@ object Members extends DynamoTable {
   }  
 }
 
-Members.query.secondaryIndexCondition(_.companyIndex){ t =>
+val list: Seq[Member] = Members.query.secondaryIndexCondition(_.companyIndex){ t =>
   t.country -> DynamoDBCondition.eq("Japan") :: t.company -> DynamoDBCondition.eq("BizReach") :: Nil
 }.list[Member]
 ```
