@@ -35,7 +35,7 @@ object DynamoDBTest extends App {
   Members.put(Member("Japan", 1, "Takezoe",   37, Some("BizReach")))
   Members.put(Member("Japan", 2, "Shimamoto", 33, Some("BizReach")))
 
-  Members.query.keyConditions { t =>
+  Members.query.filter { t =>
     t.country -> DynamoDBCondition.eq("Japan") :: t.id -> DynamoDBCondition.eq(1) :: Nil
   }.firstOption[Member].foreach(println)
 
@@ -44,7 +44,7 @@ object DynamoDBTest extends App {
     t.name -> "Naoki" :: Nil
   }
 
-  Members.query.keyConditions { t =>
+  Members.query.filter { t =>
     t.country -> DynamoDBCondition.eq("Japan") :: t.id -> DynamoDBCondition.eq(1) :: Nil
   }.firstOption[Member].foreach(println)
 
@@ -54,23 +54,20 @@ object DynamoDBTest extends App {
 
   // Query using secondary index
   println("-- Query using secondary index --")
-  println(Members.query.secondaryIndexCondition(_.companyIndex){ t =>
+  println(Members.query.filter2(_.companyIndex){ t =>
     t.country -> DynamoDBCondition.eq("Japan") :: t.company -> DynamoDBCondition.eq("BizReach") :: Nil
   }.list[Member])
 
   // Scan
   println("-- Scan --")
-  Members.scan.filterExpression("company = :company", "company" -> "BizReach").as[Member]{ x =>
+  Members.scan.filter("company = :company", "company" -> "BizReach").as[Member]{ x =>
     println(x)
   }
 
 
   val names = Members.query
-    .attribute(_.id)
-    .attribute(_.country)
-    .attribute(_.name)
-    .attribute(_.company)
-    .keyCondition(_.country -> DynamoDBCondition.eq("Japan"))
+    .select { t => t.id :: t.country :: t.name :: t.company :: Nil }
+    .filter(_.country -> DynamoDBCondition.eq("Japan"))
     .limit(100000)
     .map { (t, x) =>
       (x.get(t.id), x.get(t.country), x.get(t.name), x.get(t.company))

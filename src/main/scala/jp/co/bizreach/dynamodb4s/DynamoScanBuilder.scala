@@ -12,13 +12,11 @@ case class DynamoScanBuilder[T <: DynamoTable](
   private val _valueMap: Map[String, Any] = Map.empty,
   private val _limit: Int = 1000){
 
-  def attributes(f: T => Seq[DynamoProperty[_]]): DynamoScanBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
-
-  def attribute(f: T => DynamoProperty[_]): DynamoScanBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
+  def select(f: T => Seq[DynamoProperty[_]]): DynamoScanBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
 
   def limit(i: Int): DynamoScanBuilder[T] = this.copy(_limit = i)
 
-  def filterExpression(expression: String, values: (String, Any)*): DynamoScanBuilder[T] =
+  def filter(expression: String, values: (String, Any)*): DynamoScanBuilder[T] =
     this.copy(_filterExpression = Some(expression), _valueMap = _valueMap ++ values)
 
   def foreach[E](mapper: (T, DynamoRow) => E)(implicit db: awscala.dynamodbv2.DynamoDB): Unit = {

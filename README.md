@@ -68,10 +68,8 @@ val list: Seq[Member] = Members.query.keyConditions { t =>
 
 // Query with manual mapping
 val list: Seq[(String, Int)] = Members.query
-  .attribute(_.name)
-  .attribute(_.age)
-  .keyCondition(_.country -> DynamoDBCondition.eq("Japan"))
-  .keyCondition(_.id -> DynamoDBCondition.eq(1))
+  .select { t => t.name :: t.age :: Nil }
+  .filter { t => t.country -> DynamoDBCondition.eq("Japan") :: t.id -> DynamoDBCondition.eq(1) :: Nil }
   .limit(100000)
   .map { (t, x) =>
     (x.get(t.name), x.get(t.age))
@@ -95,7 +93,7 @@ object Members extends DynamoTable {
   }  
 }
 
-val list: Seq[Member] = Members.query.secondaryIndexCondition(_.companyIndex){ t =>
+val list: Seq[Member] = Members.query.filter2(_.companyIndex){ t =>
   t.country -> DynamoDBCondition.eq("Japan") :: t.company -> DynamoDBCondition.eq("BizReach") :: Nil
 }.list[Member]
 ```
@@ -103,7 +101,7 @@ val list: Seq[Member] = Members.query.secondaryIndexCondition(_.companyIndex){ t
 ### Scan
 
 ```scala
-Members.scan.filterExpression("company = :company", "company" -> "BizReach").as[Member]{ x =>
+Members.scan.filter("company = :company", "company" -> "BizReach").as[Member]{ x =>
   println(x)
 }
 ```

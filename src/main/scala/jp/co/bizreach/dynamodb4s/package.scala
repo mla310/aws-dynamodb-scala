@@ -1,5 +1,7 @@
 package jp.co.bizreach
 
+import com.amazonaws.services.dynamodbv2.model.Condition
+
 package object dynamodb4s {
 
   trait DynamoDataType[T] {
@@ -59,5 +61,8 @@ package object dynamodb4s {
   case class DynamoAttribute[T](name: String)(implicit t: DynamoDataType[T]) extends DynamoProperty[T] {
     def convert(value: Any): T = t.convert(value)
   }
+
+  implicit def condition2seq(x: (DynamoKey, Condition)): Seq[(DynamoKey, Condition)] = Seq(x)
+  implicit def property2seq(x: DynamoProperty[_]): Seq[DynamoProperty[_]] = Seq(x)
 
 }

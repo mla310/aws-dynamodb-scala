@@ -11,25 +11,25 @@ case class DynamoQueryBuilder[T <: DynamoTable](
   private val _keyConditions: T => Seq[(DynamoKey, com.amazonaws.services.dynamodbv2.model.Condition)],
   private val _attributes: T => Seq[DynamoProperty[_]],
   private val _limit: Int = 1000,
-  private val _consistentRead: Boolean = false,
+//  private val _consistentRead: Boolean = false,
   private val _indexName: Option[String] = None){
 
-  def secondaryIndexCondition[I <: SecondaryIndex](i: T  => I)(f: I => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = {
+  def filter2[I <: SecondaryIndex](i: T  => I)(f: I => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = {
     val index = i(_table)
     this.copy(_indexName = Some(index.index), _keyConditions = t => (_keyConditions(t) ++ f(index)))
   }
 
-  def keyConditions(f: T => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ f(t)))
+  def filter(f: T => Seq[(DynamoKey, Condition)]): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ f(t)))
 
-  def keyCondition(f: T => (DynamoKey, Condition)): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ Seq(f(t))))
+//  def keyCondition(f: T => (DynamoKey, Condition)): DynamoQueryBuilder[T] = this.copy(_keyConditions = t => (_keyConditions(t) ++ Seq(f(t))))
 
-  def attributes(f: T => Seq[DynamoProperty[_]]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
+  def select(f: T => Seq[DynamoProperty[_]]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ f(t)))
 
-  def attribute(f: T => DynamoProperty[_]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
+//  def attribute(f: T => DynamoProperty[_]): DynamoQueryBuilder[T] = this.copy(_attributes = t => (_attributes(t) ++ Seq(f(t))))
 
   def limit(i: Int): DynamoQueryBuilder[T] = this.copy(_limit = i)
 
-  def consistentRead(b: Boolean): DynamoQueryBuilder[T] = this.copy(_consistentRead = b)
+//  def consistentRead(b: Boolean): DynamoQueryBuilder[T] = this.copy(_consistentRead = b)
 
   def map[E](mapper: (T, DynamoRow) => E)(implicit db: awscala.dynamodbv2.DynamoDB): Seq[E] = {
     val items  = db.query(createRequest(_attributes(_table).map(_.name))).getItems
@@ -76,7 +76,7 @@ case class DynamoQueryBuilder[T <: DynamoTable](
       .withTableName(_table.table)
       .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
       .withLimit(_limit)
-      .withConsistentRead(_consistentRead)
+//      .withConsistentRead(_consistentRead)
       .withSelect(Select.SPECIFIC_ATTRIBUTES)
       .withAttributesToGet(attributes: _*)
 
