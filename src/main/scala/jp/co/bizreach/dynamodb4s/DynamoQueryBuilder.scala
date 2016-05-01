@@ -32,17 +32,7 @@ case class DynamoQueryBuilder[T <: DynamoTable](
   def consistentRead(b: Boolean): DynamoQueryBuilder[T] = this.copy(_consistentRead = b)
 
   def map[E](mapper: (T, DynamoRow) => E)(implicit db: awscala.dynamodbv2.DynamoDB): Seq[E] = {
-    val req = new QueryRequest()
-      .withTableName(_table.table)
-      .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
-      .withLimit(_limit)
-      .withConsistentRead(_consistentRead)
-      .withSelect(Select.SPECIFIC_ATTRIBUTES)
-      .withAttributesToGet(_attributes(_table).map(_.name): _*)
-
-    _indexName.foreach(req.withIndexName)
-
-    val items  = db.query(req).getItems
+    val items  = db.query(createRequest(_attributes(_table).map(_.name))).getItems
     items.asScala.map { item =>
       mapper(_table, new DynamoRow(item))
     }
@@ -55,17 +45,7 @@ case class DynamoQueryBuilder[T <: DynamoTable](
   def first[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): E = as.head
 
   def as[E <: AnyRef](implicit db: awscala.dynamodbv2.DynamoDB, c: ClassTag[E]): Seq[E] = {
-    val req = new QueryRequest()
-      .withTableName(_table.table)
-      .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
-      .withLimit(_limit)
-      .withConsistentRead(_consistentRead)
-      .withSelect(Select.SPECIFIC_ATTRIBUTES)
-      .withAttributesToGet(c.runtimeClass.getDeclaredFields.map(_.getName): _*)
-
-    _indexName.foreach(req.withIndexName)
-
-    val items  = db.query(req).getItems
+    val items  = db.query(createRequest(c.runtimeClass.getDeclaredFields.map(_.getName))).getItems
     val tableInfo = getTableInfo(_table)
     val clazz  = c.runtimeClass
     val fields = clazz.getDeclaredFields
@@ -89,5 +69,19 @@ case class DynamoQueryBuilder[T <: DynamoTable](
       }
       o.asInstanceOf[E]
     }
+  }
+
+  protected def createRequest(attributes: Seq[String]): QueryRequest = {
+    val req = new QueryRequest()
+      .withTableName(_table.table)
+      .withKeyConditions(_keyConditions(_table).map { case (key, condition) => key.name -> condition }.toMap.asJava)
+      .withLimit(_limit)
+      .withConsistentRead(_consistentRead)
+      .withSelect(Select.SPECIFIC_ATTRIBUTES)
+      .withAttributesToGet(attributes: _*)
+
+    _indexName.foreach(req.withIndexName)
+
+    req
   }
 }

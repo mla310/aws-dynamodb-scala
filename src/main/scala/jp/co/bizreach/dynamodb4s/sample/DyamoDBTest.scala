@@ -53,9 +53,16 @@ object DynamoDBTest extends App {
 //  }.list[Member].foreach(println)
 
   // Query using secondary index
+  println("-- Query using secondary index --")
   println(Members.query.secondaryIndexCondition(_.companyIndex){ t =>
     t.country -> DynamoDBCondition.eq("Japan") :: t.company -> DynamoDBCondition.eq("BizReach") :: Nil
   }.list[Member])
+
+  // Scan
+  println("-- Scan --")
+  println(Members.scan.filterExpression("company = :company", "company" -> "BizReach").as[Member]{ x =>
+    println(x)
+  })
 
 
   val names = Members.query
