@@ -28,7 +28,7 @@ Create table definition as below:
 
 ```scala
 object Members extends DynamoTable {
-  protected val table = "members"
+  val table   = "members"
   val country = DynamoHashKey[String]("country")
   val id      = DynamoRangeKey[Int]("id")
   val name    = DynamoAttribute[String]("name")
@@ -80,7 +80,7 @@ val list: Seq[(String, Int)] = Members.query
 
 ```scala
 object Members extends DynamoTable {
-  protected val table = "members"
+  val table   = "members"
   val id      = DynamoHashKey[Int]("id")
   val country = DynamoRangeKey[String]("country")
   val name    = DynamoAttribute[String]("name")
