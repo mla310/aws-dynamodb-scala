@@ -60,9 +60,9 @@ object DynamoDBTest extends App {
 
   // Scan
   println("-- Scan --")
-  println(Members.scan.filterExpression("company = :company", "company" -> "BizReach").as[Member]{ x =>
+  Members.scan.filterExpression("company = :company", "company" -> "BizReach").as[Member]{ x =>
     println(x)
-  })
+  }
 
 
   val names = Members.query

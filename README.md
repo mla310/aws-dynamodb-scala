@@ -98,3 +98,11 @@ Members.query.secondaryIndexCondition(_.companyIndex){ t =>
   t.country -> DynamoDBCondition.eq("Japan") :: t.company -> DynamoDBCondition.eq("BizReach") :: Nil
 }.list[Member]
 ```
+
+### Scan
+
+```scala
+Members.scan.filterExpression("company = :company", "company" -> "BizReach").as[Member]{ x =>
+  println(x)
+}
+```
