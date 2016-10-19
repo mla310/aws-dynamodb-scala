@@ -47,7 +47,11 @@ case class DynamoScanBuilder[T <: DynamoTable](
       items.asScala.map { x =>
         val c = clazz.getConstructors()(0)
         val args = c.getParameterTypes.map { x =>
-          if(x == classOf[Int]) new Integer(0) else null
+          if(x == classOf[Int]) new java.lang.Integer(0)
+          else if(x == classOf[Long]) new java.lang.Long(0)
+          else if(x == classOf[Double]) new java.lang.Double(0)
+          else if(x == classOf[Float]) new java.lang.Float(0)
+          else null
         }
         val o = c.newInstance(args: _*)
         fields.foreach { f =>
