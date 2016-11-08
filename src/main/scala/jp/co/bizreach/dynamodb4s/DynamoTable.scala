@@ -127,6 +127,8 @@ object DynamoTable {
       attr.getS
     } else if(attr.getSS != null){
       attr.getSS.asScala
+    } else if(attr.getM != null) {
+      attr.getM
     } else {
       null
     }
